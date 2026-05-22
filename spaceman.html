@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SpaceMan Laser Blaster</title>
+  <style>
+    html,body{height:100%;margin:0;background:#05030a;color:#e6f7ff;font-family:Inter,Arial,monospace}
+    .wrap{display:flex;gap:16px;align-items:flex-start;padding:14px}
+    .game{position:relative;background:#000;border:6px solid #091426;box-shadow:0 8px 30px rgba(0,0,0,.7)}
+    canvas{display:block;image-rendering:pixelated}
+    .ui{width:340px}
+    h1{font-family:monospace;margin:0 0 8px 0;font-size:20px;letter-spacing:1px;color:#7be3ff;text-shadow:0 0 8px rgba(123,227,255,.12)}
+    .panel{background:linear-gradient(180deg,#071026 0%,#02101a 100%);border:1px solid rgba(124,220,255,.06);padding:12px;border-radius:8px}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+    .stat{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;text-align:center}
+    button{background:#0ea5c9;border:0;color:#001219;padding:8px 10px;border-radius:6px;cursor:pointer;font-weight:700}
+    button.secondary{background:#1e293b;color:#cfe8f5}
+    .shop{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .footer{font-size:12px;color:#9fb8c9;margin-top:10px}
+    .hud{position:absolute;left:8px;top:8px;color:#cfe8f5;font-weight:700;text-shadow:0 1px 0 #001}
+    .credits{position:absolute;right:8px;top:8px;color:#ffe87a;font-weight:800}
+    .pixel{image-rendering:pixelated}
+    .center{display:flex;align-items:center;gap:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="game">
+      <div class="hud">SpaceMan Laser Blaster</div>
+      <div class="credits" id="creditsDisplay">Credits: 0</div>
+      <canvas id="screen"></canvas>
+    </div>
+
+    <div class="ui">
+      <h1>Controls & Stats</h1>
+      <div class="panel">
+        <div class="stats" id="statsGrid">
+          <div class="stat">Kills<br><span id="kills">0</span></div>
+          <div class="stat">Shots<br><span id="shots">0</span></div>
+          <div class="stat">Hits<br><span id="hits">0</span></div>
+          <div class="stat">Accuracy<br><span id="acc">0%</span></div>
+        </div>
+        <div style="margin-bottom:8px">Movement: WASD — Aim: Mouse — Shoot: Hold / Click</div>
+        <div style="margin-bottom:6px">Weapon: <strong id="weaponName">Pistol</strong></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button onclick="togglePause()" id="pauseBtn">Pause</button>
+          <button class="secondary" onclick="resetGame()">Reset</button>
+        </div>
+        <div class="footer">Tip: Enemies drop credits. Use credits to upgrade fire rate, damage, or unlock automatic rifle.</div>
+      </div>
+
+      <h1 style="margin-top:12px">Shop</h1>
+      <div class="panel shop" id="shop">
+        <!-- shop buttons inserted by script -->
+      </div>
+      <div class="panel" style="margin-top:10px">
+        <div style="font-weight:800">Current Weapon</div>
+        <div id="weaponStats" style="margin-top:8px;font-size:13px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Pixelated top-down shooter: SpaceMan Laser Blaster
+    const LOW_W = 240, LOW_H = 160; // low-res virtual canvas
+    const screen = document.getElementById('screen');
+    const creditsDisplay = document.getElementById('creditsDisplay');
+    const killsEl = document.getElementById('kills');
+    const shotsEl = document.getElementById('shots');
+    const hitsEl = document.getElementById('hits');
+    const accEl = document.getElementById('acc');
+    const weaponNameEl = document.getElementById('weaponName');
+    const weaponStatsEl = document.getElementById('weaponStats');
+    const shopEl = document.getElementById('shop');
+
+    // create backing low-res canvas and scale it up for pixel art
+    const low = document.createElement('canvas');
+    low.width = LOW_W; low.height = LOW_H;
+    const lctx = low.getContext('2d');
+
+    function resize() {
+      // scale to fit while preserving integer scale for pixelated look
+      const maxW = Math.min(window.innerWidth - 400, 960);
+      const scale = Math.max(2, Math.floor(Math.min(maxW / LOW_W, window.innerHeight / LOW_H)));
+      screen.width = LOW_W * scale; screen.height = LOW_H * scale;
+      screen.style.width = screen.width + 'px'; screen.style.height = screen.height + 'px';
+      screen.getContext('2d').imageSmoothingEnabled = false;
+      scaleFactor = scale;
+    }
+    window.addEventListener('resize', resize);
+
+    // Game state
+    let scaleFactor = 3;
+    resize();
+
+    const G = {
+      player: {x: LOW_W/2, y: LOW_H/2, r:6, speed:1.2, angle:0},
+      bullets: [],
+      enemies: [],
+      particles: [],
+      keys: {},
+      mouse: {x:LOW_W/2,y:LOW_H/2,down:false},
+      paused:false,
+      stats:{kills:0,shots:0,hits:0,credits:0}
+    };
+
+    const WEAPONS = [
+      { id:'pistol', name:'Pistol', fireRate:300, damage:18, bulletSpeed:4.4, auto:false, costUnlock:0 },
+      { id:'smg', name:'SMG', fireRate:90, damage:8, bulletSpeed:5.2, auto:true, costUnlock:250 },
+      { id:'rifle', name:'Assault Rifle', fireRate:55, damage:10, bulletSpeed:6.2, auto:true, costUnlock:650 }
+    ];
+
+    let weapon = { index:0, level:0, lastShot:0 };
+
+    // shop configuration
+    const SHOP = [
+      { key:'rate', label:'Increase Fire Rate', baseCost:100, apply:()=>{ WEAPONS[weapon.index].fireRate = Math.max(20, Math.floor(WEAPONS[weapon.index].fireRate*0.85)); } },
+      { key:'dmg', label:'Increase Damage', baseCost:120, apply:()=>{ WEAPONS[weapon.index].damage = Math.ceil(WEAPONS[weapon.index].damage*1.25); } },
+      { key:'unlock', label:'Unlock Next Weapon', baseCost:0, apply:()=>{} }
+    ];
+
+    function spawnEnemy() {
+      const edge = Math.floor(Math.random()*4);
+      let x=0,y=0;
+      if(edge===0){ x = Math.random()*LOW_W; y = -8; }
+      if(edge===1){ x = Math.random()*LOW_W; y = LOW_H+8; }
+      if(edge===2){ x = -8; y = Math.random()*LOW_H; }
+      if(edge===3){ x = LOW_W+8; y = Math.random()*LOW_H; }
+      const size = 8 + Math.random()*8;
+      const hp = Math.ceil(20 + Math.random()*30);
+      G.enemies.push({x,y,vx:0,vy:0,r:size,hp,maxHp:hp, speed:0.2+Math.random()*0.6, color: '#ff6b6b' });
+    }
+
+    // spawn loop
+    setInterval(()=>{ if(!G.paused && Math.random()<0.9) spawnEnemy(); }, 900);
+
+    // input
+    window.addEventListener('keydown', e=>{ G.keys[e.key.toLowerCase()] = true; if(e.key===' '){ G.mouse.down=true; } });
+    window.addEventListener('keyup', e=>{ G.keys[e.key.toLowerCase()] = false; if(e.key===' '){ G.mouse.down=false; } });
+    screen.addEventListener('mousedown', e=>{ G.mouse.down=true; });
+    screen.addEventListener('mouseup', e=>{ G.mouse.down=false; });
+    screen.addEventListener('mousemove', e=>{
+      const rect = screen.getBoundingClientRect();
+      const sx = e.clientX - rect.left; const sy = e.clientY - rect.top;
+      G.mouse.x = Math.max(0, Math.min(LOW_W, sx / scaleFactor));
+      G.mouse.y = Math.max(0, Math.min(LOW_H, sy / scaleFactor));
+    });
+
+    function normalized(a,b){ const l = Math.hypot(b.x-a.x,b.y-a.y)||1; return {x:(b.x-a.x)/l,y:(b.y-a.y)/l}; }
+
+    function shoot(now) {
+      const w = WEAPONS[weapon.index];
+      if(now - weapon.lastShot < w.fireRate) return;
+      weapon.lastShot = now;
+      // shotgun/spread for pistol small spread
+      const dir = normalized(G.player, G.mouse);
+      const spread = (w.id==='pistol'?0.07:(w.id==='smg'?0.18:0.06));
+      const count = (w.id==='pistol'?1:(w.id==='smg'?1:1));
+      for(let i=0;i<count;i++){
+        const ang = Math.atan2(dir.y,dir.x) + (Math.random()-0.5)*spread;
+        const bx = G.player.x + Math.cos(ang)*8;
+        const by = G.player.y + Math.sin(ang)*8;
+        G.bullets.push({x:bx,y:by,vx:Math.cos(ang)*w.bulletSpeed,vy:Math.sin(ang)*w.bulletSpeed,r:2,damage:w.damage,color:'#7efcff'});
+      }
+      G.stats.shots++;
+    }
+
+    function update(dt, now) {
+      // player move
+      let dx=0,dy=0;
+      if(G.keys['w']||G.keys['arrowup']) dy -= 1;
+      if(G.keys['s']||G.keys['arrowdown']) dy += 1;
+      if(G.keys['a']||G.keys['arrowleft']) dx -= 1;
+      if(G.keys['d']||G.keys['arrowright']) dx += 1;
+      if(dx||dy){ const L=Math.hypot(dx,dy)||1; G.player.x += (dx/L)*G.player.speed*dt; G.player.y += (dy/L)*G.player.speed*dt; }
+      G.player.x = Math.max(8, Math.min(LOW_W-8, G.player.x));
+      G.player.y = Math.max(8, Math.min(LOW_H-8, G.player.y));
+
+      // shooting
+      const w = WEAPONS[weapon.index];
+      if((w.auto && G.mouse.down) || (!w.auto && G.mouse.down)) shoot(now);
+
+      // bullets
+      for(let i=G.bullets.length-1;i>=0;i--){ const b=G.bullets[i]; b.x+=b.vx*dt; b.y+=b.vy*dt; b.life=(b.life||0)+dt; if(b.x< -10||b.x>LOW_W+10||b.y<-10||b.y>LOW_H+10||b.life>120) G.bullets.splice(i,1); }
+
+      // enemies
+      for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; const dir=normalized(e,G.player); e.vx = dir.x*e.speed*dt*60; e.vy = dir.y*e.speed*dt*60; e.x += e.vx; e.y += e.vy; // check collision with bullets
+        for(let j=G.bullets.length-1;j>=0;j--){ const b=G.bullets[j]; const d = Math.hypot(b.x-e.x,b.y-e.y); if(d < e.r + b.r){ e.hp -= b.damage; G.bullets.splice(j,1); G.stats.hits++; if(e.hp<=0){ // enemy died
+                G.enemies.splice(i,1); G.stats.kills++; const reward = 10 + Math.floor(Math.random()*12); G.stats.credits += reward; spawningExplosion(e.x,e.y); addFloating('+'+reward,e.x,e.y,'#ffe87a'); G.stats.transactions = G.stats.transactions||[]; G.stats.transactions.push('Enemy eliminated +'+reward+'c'); break; } }
+        }
+        // enemy touching player
+        const pd = Math.hypot(G.player.x-e.x,G.player.y-e.y);
+        if(pd < e.r + G.player.r){ // damage player and push back
+          G.player.x -= dir.x*1.5; G.player.y -= dir.y*1.5;
+        }
+      }
+
+      // particles lifetime
+      for(let i=G.particles.length-1;i>=0;i--){ const p=G.particles[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; if(p.life<=0) G.particles.splice(i,1); }
+
+      // auto spawn credits UI update
+      updateUI();
+    }
+
+    function addFloating(text,x,y,color){ const p={x,y,text,color,life:60}; G.particles.push(p); }
+    function spawningExplosion(x,y){ for(let i=0;i<12;i++){ const ang=Math.random()*Math.PI*2; G.particles.push({x,y,vx:Math.cos(ang)*(1+Math.random()*2),vy:Math.sin(ang)*(1+Math.random()*2),life:20+Math.random()*20,color:'#ff9b9b'}); } }
+
+    let last = performance.now();
+    function loop(now){ const dt = Math.min(2,(now-last)/16.666); last=now; if(!G.paused){ update(dt, now); render(); } requestAnimationFrame(loop); }
+
+    function render() {
+      // clear low res
+      lctx.fillStyle = '#000'; lctx.fillRect(0,0,LOW_W,LOW_H);
+      // starfield
+      for(let i=0;i<60;i++){ const sx=(i*97)%LOW_W; const sy=(i*53)%LOW_H; const s = ((i*31)%3)+1; lctx.fillStyle = 'rgba(180,220,255,'+((i%7)/12+0.05)+')'; lctx.fillRect((sx+Math.sin(performance.now()/1000+i)*2+LOW_W)%LOW_W, (sy+Math.cos(performance.now()/1200+i)*2+LOW_H)%LOW_H, s, s); }
+
+      // draw player
+      lctx.save(); lctx.translate(G.player.x, G.player.y); const angle = Math.atan2(G.mouse.y-G.player.y, G.mouse.x-G.player.x); lctx.rotate(angle);
+      // body
+      lctx.fillStyle = '#7efcff'; lctx.fillRect(-7,-6,14,12);
+      // helmet
+      lctx.fillStyle = '#0ea5c9'; lctx.fillRect(-6,-10,12,6);
+      lctx.restore();
+
+      // bullets
+      for(const b of G.bullets){ lctx.fillStyle = b.color; lctx.fillRect(b.x-1,b.y-1,3,3); }
+
+      // enemies
+      for(const e of G.enemies){ lctx.fillStyle = e.color; lctx.beginPath(); lctx.arc(e.x,e.y,e.r,0,Math.PI*2); lctx.fill(); // HP bar
+        lctx.fillStyle = '#222'; lctx.fillRect(e.x - e.r, e.y - e.r - 6, e.r*2, 4); lctx.fillStyle = '#ff6b6b'; lctx.fillRect(e.x - e.r, e.y - e.r - 6, (e.hp/e.maxHp)*e.r*2, 4);
+      }
+
+      // particles and floating texts
+      for(const p of G.particles){ if(p.text){ lctx.fillStyle = p.color; lctx.font = '8px monospace'; lctx.fillText(p.text, p.x, p.y); } else { lctx.fillStyle = p.color; lctx.fillRect(p.x,p.y,2,2); } }
+
+      // blit low onto screen scaled
+      const ctx = screen.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.clearRect(0,0,screen.width,screen.height); ctx.drawImage(low,0,0,LOW_W,LOW_H,0,0,screen.width,screen.height);
+    }
+
+    // UI and shop
+    function updateUI(){ killsEl.textContent = G.stats.kills; shotsEl.textContent = G.stats.shots; hitsEl.textContent = G.stats.hits; const acc = G.stats.shots?Math.round((G.stats.hits/G.stats.shots)*100):0; accEl.textContent = acc + '%'; creditsDisplay.textContent = 'Credits: ' + G.stats.credits; weaponNameEl.textContent = WEAPONS[weapon.index].name; weaponStatsEl.innerHTML = `FireRate: ${WEAPONS[weapon.index].fireRate}ms • Dmg: ${WEAPONS[weapon.index].damage} • ${WEAPONS[weapon.index].auto? 'Auto' : 'Semi'}`; renderShop(); }
+
+    function renderShop(){ shopEl.innerHTML = '';
+      // rate and damage upgrades for current weapon
+      SHOP.forEach(item=>{
+        const cost = Math.max(50, Math.floor(item.baseCost * (1 + (weapon.level*0.6))));
+        if(item.key==='unlock'){
+          const next = WEAPONS[weapon.index+1];
+          const btn = document.createElement('div'); btn.className='center';
+          if(next){ const price = next.costUnlock; btn.innerHTML = `<button onclick="buyUnlock()">Unlock ${next.name} - ${price}c</button>`; } else { btn.innerHTML = `<div style=\"color:#7fb6ff;\">All weapons unlocked</div>`; }
+          shopEl.appendChild(btn);
+        } else {
+          const el = document.createElement('div'); el.className='center'; el.innerHTML = `<button onclick=\"buy('${item.key}',${cost})\">${item.label} — ${cost}c</button>`; shopEl.appendChild(el);
+        }
+      });
+      // quick weapon switch buttons
+      const sw = document.createElement('div'); sw.style.display='flex'; sw.style.gap='6px'; sw.style.marginTop='6px'; WEAPONS.forEach((w,i)=>{ const b = document.createElement('button'); b.textContent=w.name; b.style.flex='1'; b.onclick=()=>{ if(w.costUnlock && G.stats.credits < w.costUnlock) return alert('Not enough credits to unlock'); if(w.costUnlock && !w.costUnlock){}; weapon.index = i; updateUI(); }; sw.appendChild(b); }); shopEl.appendChild(sw);
+    }
+
+    function buy(key,cost){ if(G.stats.credits < cost) return alert('Not enough credits'); G.stats.credits -= cost; if(key==='rate') SHOP[0].apply(); if(key==='dmg') SHOP[1].apply(); weapon.level++; updateUI(); }
+    function buyUnlock(){ const nxt = WEAPONS[weapon.index+1]; if(!nxt) return; if(G.stats.credits < nxt.costUnlock) return alert('Not enough credits'); G.stats.credits -= nxt.costUnlock; // mark unlocked by setting costUnlock to 0
+      nxt.costUnlock = 0; alert(nxt.name + ' unlocked!'); updateUI(); }
+
+    function togglePause(){ G.paused = !G.paused; document.getElementById('pauseBtn').textContent = G.paused? 'Resume' : 'Pause'; }
+    function resetGame(){ if(!confirm('Reset game?')) return; G.enemies=[]; G.bullets=[]; G.particles=[]; G.stats={kills:0,shots:0,hits:0,credits:0}; weapon = { index:0, level:0, lastShot:0 }; updateUI(); }
+
+    // small automatic credit collection from particles
+    setInterval(()=>{ // small cleanup
+      if(G.stats.credits>999999) G.stats.credits = 999999; updateUI(); }, 2000);
+
+    // init
+    updateUI(); requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
