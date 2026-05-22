@@ -1,276 +1,1086 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SpaceMan Laser Blaster</title>
-  <style>
-    html,body{height:100%;margin:0;background:#05030a;color:#e6f7ff;font-family:Inter,Arial,monospace}
-    .wrap{display:flex;gap:16px;align-items:flex-start;padding:14px}
-    .game{position:relative;background:#000;border:6px solid #091426;box-shadow:0 8px 30px rgba(0,0,0,.7)}
-    canvas{display:block;image-rendering:pixelated}
-    .ui{width:340px}
-    h1{font-family:monospace;margin:0 0 8px 0;font-size:20px;letter-spacing:1px;color:#7be3ff;text-shadow:0 0 8px rgba(123,227,255,.12)}
-    .panel{background:linear-gradient(180deg,#071026 0%,#02101a 100%);border:1px solid rgba(124,220,255,.06);padding:12px;border-radius:8px}
-    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
-    .stat{background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;text-align:center}
-    button{background:#0ea5c9;border:0;color:#001219;padding:8px 10px;border-radius:6px;cursor:pointer;font-weight:700}
-    button.secondary{background:#1e293b;color:#cfe8f5}
-    .shop{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-    .footer{font-size:12px;color:#9fb8c9;margin-top:10px}
-    .hud{position:absolute;left:8px;top:8px;color:#cfe8f5;font-weight:700;text-shadow:0 1px 0 #001}
-    .credits{position:absolute;right:8px;top:8px;color:#ffe87a;font-weight:800}
-    .pixel{image-rendering:pixelated}
-    .center{display:flex;align-items:center;gap:8px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaming Skills Trainer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status {
+            font-size: 1.1em;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-top: 10px;
+            display: inline-block;
+            background: rgba(0, 212, 255, 0.1);
+            border: 2px solid #00d4ff;
+        }
+
+        .status.connected {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: #22c55e;
+        }
+
+        .status.disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
+
+        .menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .menu-card {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 153, 255, 0.1));
+            border: 2px solid #00d4ff;
+            border-radius: 15px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-5px);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 153, 255, 0.2));
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .menu-card h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+
+        .menu-card p {
+            font-size: 0.95em;
+            color: #ccc;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        .game-area {
+            background: linear-gradient(135deg, rgba(22, 33, 62, 0.8), rgba(26, 26, 46, 0.8));
+            border: 3px solid #00d4ff;
+            border-radius: 15px;
+            padding: 30px;
+            display: none;
+            min-height: 500px;
+            position: relative;
+        }
+
+        .game-area.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .game-title {
+            font-size: 2em;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .score {
+            font-size: 1.8em;
+            color: #22c55e;
+            font-weight: bold;
+        }
+
+        .timer {
+            font-size: 1.8em;
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        /* Aim Training */
+        .aim-container {
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px dashed #00d4ff;
+            border-radius: 10px;
+            position: relative;
+            cursor: none;
+        }
+
+        .target {
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #ff6b6b 0%, #cc0000 100%);
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 20px #ff6b6b;
+            cursor: pointer;
+        }
+
+        .target::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            top: -5px;
+            left: -5px;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        /* Speed Clicking */
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .button-item {
+            padding: 30px;
+            background: rgba(0, 153, 255, 0.2);
+            border: 2px solid #0099ff;
+            border-radius: 10px;
+            font-size: 1.5em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            user-select: none;
+        }
+
+        .button-item:active {
+            transform: scale(0.95);
+            background: rgba(0, 212, 255, 0.4);
+            box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .button-item.highlight {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border-color: #22c55e;
+            box-shadow: 0 0 20px #22c55e;
+            animation: highlight-pulse 0.3s ease;
+        }
+
+        @keyframes highlight-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Button Switching */
+        .sequence-display {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .sequence-item {
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 153, 255, 0.2);
+            border: 2px solid #0099ff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+            min-width: 50px;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        .sequence-item.active {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border-color: #22c55e;
+            box-shadow: 0 0 20px #22c55e;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .btn-primary {
+            padding: 40px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(99, 102, 241, 0.3));
+            border: 3px solid #3b82f6;
+            border-radius: 15px;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #60a5fa;
+            transition: all 0.1s ease;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.6), rgba(99, 102, 241, 0.6));
+            box-shadow: inset 0 0 30px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-primary.a {
+            border-color: #ef4444;
+            color: #f87171;
+        }
+
+        .btn-primary.b {
+            border-color: #f59e0b;
+            color: #fbbf24;
+        }
+
+        .btn-primary.x {
+            border-color: #3b82f6;
+            color: #60a5fa;
+        }
+
+        .btn-primary.y {
+            border-color: #22c55e;
+            color: #4ade80;
+        }
+
+        /* Reaction Time */
+        .reaction-box {
+            width: 200px;
+            height: 200px;
+            background: rgba(99, 102, 241, 0.2);
+            border: 3px solid #6366f1;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .reaction-box.ready {
+            background: rgba(34, 197, 94, 0.3);
+            border-color: #22c55e;
+        }
+
+        .reaction-box.go {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            border-color: #ff6b6b;
+            animation: go-pulse 0.1s ease;
+        }
+
+        @keyframes go-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Stick Precision */
+        .crosshair-zone {
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px dashed #00d4ff;
+            border-radius: 10px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .crosshair {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #00d4ff;
+            border-radius: 50%;
+            position: absolute;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+
+        .crosshair::before {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 2px;
+            background: #00d4ff;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background: #00d4ff;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .precision-target {
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, rgba(34, 197, 94, 0.5), rgba(16, 185, 129, 0.3));
+            border: 2px solid #22c55e;
+            border-radius: 50%;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #22c55e;
+        }
+
+        /* Controller Info */
+        .controller-info {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #666;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 0.85em;
+            font-family: monospace;
+            margin-top: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .controller-info p {
+            margin: 5px 0;
+        }
+
+        .back-button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #666, #444);
+            align-self: flex-start;
+        }
+
+        .controls-info {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid #666;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .menu {
+                grid-template-columns: 1fr;
+            }
+
+            .game-area {
+                padding: 15px;
+            }
+
+            .aim-container,
+            .crosshair-zone {
+                height: 300px;
+            }
+
+            .button-grid {
+                max-width: 100%;
+            }
+
+            .buttons {
+                max-width: 100%;
+            }
+
+            .target {
+                width: 30px;
+                height: 30px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="game">
-      <div class="hud">SpaceMan Laser Blaster</div>
-      <div class="credits" id="creditsDisplay">Credits: 0</div>
-      <canvas id="screen"></canvas>
+    <div class="container">
+        <header>
+            <h1>🎮 Gaming Skills Trainer</h1>
+            <p style="font-size: 0.9em; color: #aaa; margin-top: 5px;">Xbox • PlayStation 5 • Nintendo Switch</p>
+            <div class="status disconnected" id="status">
+                🎮 Controller: Disconnected
+            </div>
+        </header>
+
+        <div id="menu" class="menu">
+            <div class="menu-card">
+                <h2>🎯 Aim Training</h2>
+                <p>Click targets as fast as possible</p>
+                <button onclick="startGame('aim')">Start</button>
+            </div>
+            <div class="menu-card">
+                <h2>⚡ Speed Clicking</h2>
+                <p>Tap buttons rapidly to score points</p>
+                <button onclick="startGame('speed')">Start</button>
+            </div>
+            <div class="menu-card">
+                <h2>🔄 Button Switching</h2>
+                <p>Follow the button sequence</p>
+                <button onclick="startGame('switching')">Start</button>
+            </div>
+            <div class="menu-card">
+                <h2>⚔️ Reaction Time</h2>
+                <p>React as fast as possible</p>
+                <button onclick="startGame('reaction')">Start</button>
+            </div>
+            <div class="menu-card">
+                <h2>🎲 Stick Precision</h2>
+                <p>Use right stick to hit targets</p>
+                <button onclick="startGame('precision')">Start</button>
+            </div>
+        </div>
+
+        <div id="gameArea" class="game-area">
+            <!-- Aim Training -->
+            <div id="aimGame" style="display: none; width: 100%;">
+                <div class="game-header">
+                    <div class="game-title">🎯 Aim Training</div>
+                    <div class="score">Hits: <span id="aimScore">0</span></div>
+                    <div class="timer">Time: <span id="aimTimer">30</span>s</div>
+                </div>
+                <div class="controls-info">
+                    <strong>Controls:</strong> Click on the red target to score points. 30 second round.
+                </div>
+                <div class="aim-container" id="aimContainer"></div>
+                <button class="back-button" onclick="endGame()">Back to Menu</button>
+            </div>
+
+            <!-- Speed Clicking -->
+            <div id="speedGame" style="display: none; width: 100%;">
+                <div class="game-header">
+                    <div class="game-title">⚡ Speed Clicking</div>
+                    <div class="score">Clicks: <span id="speedScore">0</span></div>
+                    <div class="timer">Time: <span id="speedTimer">20</span>s</div>
+                </div>
+                <div class="controls-info">
+                    <strong>Controls:</strong> Click any button as fast as possible. All 4 action buttons count! (Xbox: A/B/X/Y, PS5: Cross/Circle/Square/Triangle, Switch: B/A/Y/X)
+                </div>
+                <div class="button-grid" id="speedGrid"></div>
+                <button class="back-button" onclick="endGame()">Back to Menu</button>
+            </div>
+
+            <!-- Button Switching -->
+            <div id="switchingGame" style="display: none; width: 100%;">
+                <div class="game-header">
+                    <div class="game-title">🔄 Button Switching</div>
+                    <div class="score">Correct: <span id="switchingScore">0</span></div>
+                    <div class="timer">Combo: <span id="switchingCombo">0</span></div>
+                </div>
+                <div class="controls-info">
+                    <strong>Controls:</strong> Press the buttons in the sequence shown (adapts to your controller type). Use controller buttons or click!
+                </div>
+                <div class="sequence-display" id="sequenceDisplay"></div>
+                <div class="buttons" id="buttonContainer"></div>
+                <button class="back-button" onclick="endGame()">Back to Menu</button>
+            </div>
+
+            <!-- Reaction Time -->
+            <div id="reactionGame" style="display: none; width: 100%;">
+                <div class="game-header">
+                    <div class="game-title">⚔️ Reaction Time</div>
+                    <div class="score">Avg: <span id="reactionAvg">0</span>ms</div>
+                    <div class="timer">Round: <span id="reactionRound">0</span>/5</div>
+                </div>
+                <div class="controls-info">
+                    <strong>Controls:</strong> Wait for the box to turn red, then click/press as fast as possible!
+                </div>
+                <div class="reaction-box" id="reactionBox">Ready?</div>
+                <button class="back-button" onclick="endGame()">Back to Menu</button>
+            </div>
+
+            <!-- Stick Precision -->
+            <div id="precisionGame" style="display: none; width: 100%;">
+                <div class="game-header">
+                    <div class="game-title">🎲 Stick Precision</div>
+                    <div class="score">Hits: <span id="precisionScore">0</span></div>
+                    <div class="timer">Time: <span id="precisionTimer">30</span>s</div>
+                </div>
+                <div class="controls-info">
+                    <strong>Controls:</strong> Use Right Stick to move crosshair and hit green targets. Left Stick = aim, Right Trigger = shoot!
+                </div>
+                <div class="crosshair-zone" id="crosshairZone">
+                    <div class="crosshair" id="crosshair"></div>
+                </div>
+                <button class="back-button" onclick="endGame()">Back to Menu</button>
+            </div>
+
+            <div class="controller-info" id="controllerInfo"></div>
+        </div>
     </div>
 
-    <div class="ui">
-      <h1>Controls & Stats</h1>
-      <div class="panel">
-        <div class="stats" id="statsGrid">
-          <div class="stat">Kills<br><span id="kills">0</span></div>
-          <div class="stat">Shots<br><span id="shots">0</span></div>
-          <div class="stat">Hits<br><span id="hits">0</span></div>
-          <div class="stat">Accuracy<br><span id="acc">0%</span></div>
-        </div>
-        <div style="margin-bottom:8px">Movement: WASD — Aim: Mouse — Shoot: Hold / Click</div>
-        <div style="margin-bottom:6px">Weapon: <strong id="weaponName">Pistol</strong></div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <button onclick="togglePause()" id="pauseBtn">Pause</button>
-          <button class="secondary" onclick="resetGame()">Reset</button>
-        </div>
-        <div class="footer">Tip: Enemies drop credits. Use credits to upgrade fire rate, damage, or unlock automatic rifle.</div>
-      </div>
+    <script>
+        let gamepadSupported = !!navigator.getGamepads;
+        let gameState = {
+            currentGame: null,
+            isRunning: false,
+            gamepads: {},
+            score: 0,
+            startTime: 0,
+            controllerTypes: {}
+        };
 
-      <h1 style="margin-top:12px">Shop</h1>
-      <div class="panel shop" id="shop">
-        <!-- shop buttons inserted by script -->
-      </div>
-      <div class="panel" style="margin-top:10px">
-        <div style="font-weight:800">Current Weapon</div>
-        <div id="weaponStats" style="margin-top:8px;font-size:13px"></div>
-      </div>
-    </div>
-  </div>
+        // Controller Type Detection and Button Mapping
+        const BUTTON_LABELS = {
+            'xbox': ['A', 'B', 'X', 'Y'],
+            'playstation': ['Cross', 'Circle', 'Square', 'Triangle'],
+            'nintendo': ['B', 'A', 'Y', 'X'],
+            'default': ['Button 0', 'Button 1', 'Button 2', 'Button 3']
+        };
 
-  <script>
-    // Pixelated top-down shooter: SpaceMan Laser Blaster
-    const LOW_W = 240, LOW_H = 160; // low-res virtual canvas
-    const screen = document.getElementById('screen');
-    const creditsDisplay = document.getElementById('creditsDisplay');
-    const killsEl = document.getElementById('kills');
-    const shotsEl = document.getElementById('shots');
-    const hitsEl = document.getElementById('hits');
-    const accEl = document.getElementById('acc');
-    const weaponNameEl = document.getElementById('weaponName');
-    const weaponStatsEl = document.getElementById('weaponStats');
-    const shopEl = document.getElementById('shop');
+        function getControllerType(gamepad) {
+            if (!gamepad) return 'default';
+            const id = gamepad.id.toLowerCase();
 
-    // create backing low-res canvas and scale it up for pixel art
-    const low = document.createElement('canvas');
-    low.width = LOW_W; low.height = LOW_H;
-    const lctx = low.getContext('2d');
+            if (id.includes('xbox')) return 'xbox';
+            if (id.includes('playstation') || id.includes('ps5') || id.includes('dualsense')) return 'playstation';
+            if (id.includes('nintendo') || id.includes('switch') || id.includes('joycon') || id.includes('pro controller')) return 'nintendo';
 
-    function resize() {
-      // scale to fit while preserving integer scale for pixelated look
-      const maxW = Math.min(window.innerWidth - 400, 960);
-      const scale = Math.max(2, Math.floor(Math.min(maxW / LOW_W, window.innerHeight / LOW_H)));
-      screen.width = LOW_W * scale; screen.height = LOW_H * scale;
-      screen.style.width = screen.width + 'px'; screen.style.height = screen.height + 'px';
-      screen.getContext('2d').imageSmoothingEnabled = false;
-      scaleFactor = scale;
-    }
-    window.addEventListener('resize', resize);
+            // Fallback detection based on button count and vendor
+            if (id.includes('054c') || id.includes('sony')) return 'playstation';
+            if (id.includes('057e') || id.includes('nintendo')) return 'nintendo';
+            if (id.includes('045e') || id.includes('microsoft') || id.includes('xbox')) return 'xbox';
 
-    // Game state
-    let scaleFactor = 3;
-    resize();
-
-    const G = {
-      player: {x: LOW_W/2, y: LOW_H/2, r:6, speed:1.2, angle:0},
-      bullets: [],
-      enemies: [],
-      particles: [],
-      keys: {},
-      mouse: {x:LOW_W/2,y:LOW_H/2,down:false},
-      paused:false,
-      stats:{kills:0,shots:0,hits:0,credits:0}
-    };
-
-    const WEAPONS = [
-      { id:'pistol', name:'Pistol', fireRate:300, damage:18, bulletSpeed:4.4, auto:false, costUnlock:0 },
-      { id:'smg', name:'SMG', fireRate:90, damage:8, bulletSpeed:5.2, auto:true, costUnlock:250 },
-      { id:'rifle', name:'Assault Rifle', fireRate:55, damage:10, bulletSpeed:6.2, auto:true, costUnlock:650 }
-    ];
-
-    let weapon = { index:0, level:0, lastShot:0 };
-
-    // shop configuration
-    const SHOP = [
-      { key:'rate', label:'Increase Fire Rate', baseCost:100, apply:()=>{ WEAPONS[weapon.index].fireRate = Math.max(20, Math.floor(WEAPONS[weapon.index].fireRate*0.85)); } },
-      { key:'dmg', label:'Increase Damage', baseCost:120, apply:()=>{ WEAPONS[weapon.index].damage = Math.ceil(WEAPONS[weapon.index].damage*1.25); } },
-      { key:'unlock', label:'Unlock Next Weapon', baseCost:0, apply:()=>{} }
-    ];
-
-    function spawnEnemy() {
-      const edge = Math.floor(Math.random()*4);
-      let x=0,y=0;
-      if(edge===0){ x = Math.random()*LOW_W; y = -8; }
-      if(edge===1){ x = Math.random()*LOW_W; y = LOW_H+8; }
-      if(edge===2){ x = -8; y = Math.random()*LOW_H; }
-      if(edge===3){ x = LOW_W+8; y = Math.random()*LOW_H; }
-      const size = 8 + Math.random()*8;
-      const hp = Math.ceil(20 + Math.random()*30);
-      G.enemies.push({x,y,vx:0,vy:0,r:size,hp,maxHp:hp, speed:0.2+Math.random()*0.6, color: '#ff6b6b' });
-    }
-
-    // spawn loop
-    setInterval(()=>{ if(!G.paused && Math.random()<0.9) spawnEnemy(); }, 900);
-
-    // input
-    window.addEventListener('keydown', e=>{ G.keys[e.key.toLowerCase()] = true; if(e.key===' '){ G.mouse.down=true; } });
-    window.addEventListener('keyup', e=>{ G.keys[e.key.toLowerCase()] = false; if(e.key===' '){ G.mouse.down=false; } });
-    screen.addEventListener('mousedown', e=>{ G.mouse.down=true; });
-    screen.addEventListener('mouseup', e=>{ G.mouse.down=false; });
-    screen.addEventListener('mousemove', e=>{
-      const rect = screen.getBoundingClientRect();
-      const sx = e.clientX - rect.left; const sy = e.clientY - rect.top;
-      G.mouse.x = Math.max(0, Math.min(LOW_W, sx / scaleFactor));
-      G.mouse.y = Math.max(0, Math.min(LOW_H, sy / scaleFactor));
-    });
-
-    function normalized(a,b){ const l = Math.hypot(b.x-a.x,b.y-a.y)||1; return {x:(b.x-a.x)/l,y:(b.y-a.y)/l}; }
-
-    function shoot(now) {
-      const w = WEAPONS[weapon.index];
-      if(now - weapon.lastShot < w.fireRate) return;
-      weapon.lastShot = now;
-      // shotgun/spread for pistol small spread
-      const dir = normalized(G.player, G.mouse);
-      const spread = (w.id==='pistol'?0.07:(w.id==='smg'?0.18:0.06));
-      const count = (w.id==='pistol'?1:(w.id==='smg'?1:1));
-      for(let i=0;i<count;i++){
-        const ang = Math.atan2(dir.y,dir.x) + (Math.random()-0.5)*spread;
-        const bx = G.player.x + Math.cos(ang)*8;
-        const by = G.player.y + Math.sin(ang)*8;
-        G.bullets.push({x:bx,y:by,vx:Math.cos(ang)*w.bulletSpeed,vy:Math.sin(ang)*w.bulletSpeed,r:2,damage:w.damage,color:'#7efcff'});
-      }
-      G.stats.shots++;
-    }
-
-    function update(dt, now) {
-      // player move
-      let dx=0,dy=0;
-      if(G.keys['w']||G.keys['arrowup']) dy -= 1;
-      if(G.keys['s']||G.keys['arrowdown']) dy += 1;
-      if(G.keys['a']||G.keys['arrowleft']) dx -= 1;
-      if(G.keys['d']||G.keys['arrowright']) dx += 1;
-      if(dx||dy){ const L=Math.hypot(dx,dy)||1; G.player.x += (dx/L)*G.player.speed*dt; G.player.y += (dy/L)*G.player.speed*dt; }
-      G.player.x = Math.max(8, Math.min(LOW_W-8, G.player.x));
-      G.player.y = Math.max(8, Math.min(LOW_H-8, G.player.y));
-
-      // shooting
-      const w = WEAPONS[weapon.index];
-      if((w.auto && G.mouse.down) || (!w.auto && G.mouse.down)) shoot(now);
-
-      // bullets
-      for(let i=G.bullets.length-1;i>=0;i--){ const b=G.bullets[i]; b.x+=b.vx*dt; b.y+=b.vy*dt; b.life=(b.life||0)+dt; if(b.x< -10||b.x>LOW_W+10||b.y<-10||b.y>LOW_H+10||b.life>120) G.bullets.splice(i,1); }
-
-      // enemies
-      for(let i=G.enemies.length-1;i>=0;i--){ const e=G.enemies[i]; const dir=normalized(e,G.player); e.vx = dir.x*e.speed*dt*60; e.vy = dir.y*e.speed*dt*60; e.x += e.vx; e.y += e.vy; // check collision with bullets
-        for(let j=G.bullets.length-1;j>=0;j--){ const b=G.bullets[j]; const d = Math.hypot(b.x-e.x,b.y-e.y); if(d < e.r + b.r){ e.hp -= b.damage; G.bullets.splice(j,1); G.stats.hits++; if(e.hp<=0){ // enemy died
-                G.enemies.splice(i,1); G.stats.kills++; const reward = 10 + Math.floor(Math.random()*12); G.stats.credits += reward; spawningExplosion(e.x,e.y); addFloating('+'+reward,e.x,e.y,'#ffe87a'); G.stats.transactions = G.stats.transactions||[]; G.stats.transactions.push('Enemy eliminated +'+reward+'c'); break; } }
+            return 'default';
         }
-        // enemy touching player
-        const pd = Math.hypot(G.player.x-e.x,G.player.y-e.y);
-        if(pd < e.r + G.player.r){ // damage player and push back
-          G.player.x -= dir.x*1.5; G.player.y -= dir.y*1.5;
+
+        function getButtonLabel(controllerType, buttonIndex) {
+            const labels = BUTTON_LABELS[controllerType] || BUTTON_LABELS['default'];
+            return labels[buttonIndex] || `Button ${buttonIndex}`;
         }
-      }
 
-      // particles lifetime
-      for(let i=G.particles.length-1;i>=0;i--){ const p=G.particles[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; if(p.life<=0) G.particles.splice(i,1); }
+        // Gamepad Detection
+        function updateGamepads() {
+            const pads = navigator.getGamepads();
+            let connected = false;
+            let controllerInfo = [];
 
-      // auto spawn credits UI update
-      updateUI();
-    }
+            for (let i = 0; i < pads.length; i++) {
+                if (pads[i]) {
+                    connected = true;
+                    gameState.gamepads[i] = pads[i];
+                    const type = getControllerType(pads[i]);
+                    gameState.controllerTypes[i] = type;
+                    controllerInfo.push(`${type.toUpperCase()}`);
+                }
+            }
 
-    function addFloating(text,x,y,color){ const p={x,y,text,color,life:60}; G.particles.push(p); }
-    function spawningExplosion(x,y){ for(let i=0;i<12;i++){ const ang=Math.random()*Math.PI*2; G.particles.push({x,y,vx:Math.cos(ang)*(1+Math.random()*2),vy:Math.sin(ang)*(1+Math.random()*2),life:20+Math.random()*20,color:'#ff9b9b'}); } }
+            const status = document.getElementById('status');
+            if (connected) {
+                status.textContent = `🎮 Controller: Connected (${controllerInfo.join(', ')})`;
+                status.className = 'status connected';
+            } else {
+                status.textContent = '🎮 Controller: Disconnected';
+                status.className = 'status disconnected';
+            }
 
-    let last = performance.now();
-    function loop(now){ const dt = Math.min(2,(now-last)/16.666); last=now; if(!G.paused){ update(dt, now); render(); } requestAnimationFrame(loop); }
-
-    function render() {
-      // clear low res
-      lctx.fillStyle = '#000'; lctx.fillRect(0,0,LOW_W,LOW_H);
-      // starfield
-      for(let i=0;i<60;i++){ const sx=(i*97)%LOW_W; const sy=(i*53)%LOW_H; const s = ((i*31)%3)+1; lctx.fillStyle = 'rgba(180,220,255,'+((i%7)/12+0.05)+')'; lctx.fillRect((sx+Math.sin(performance.now()/1000+i)*2+LOW_W)%LOW_W, (sy+Math.cos(performance.now()/1200+i)*2+LOW_H)%LOW_H, s, s); }
-
-      // draw player
-      lctx.save(); lctx.translate(G.player.x, G.player.y); const angle = Math.atan2(G.mouse.y-G.player.y, G.mouse.x-G.player.x); lctx.rotate(angle);
-      // body
-      lctx.fillStyle = '#7efcff'; lctx.fillRect(-7,-6,14,12);
-      // helmet
-      lctx.fillStyle = '#0ea5c9'; lctx.fillRect(-6,-10,12,6);
-      lctx.restore();
-
-      // bullets
-      for(const b of G.bullets){ lctx.fillStyle = b.color; lctx.fillRect(b.x-1,b.y-1,3,3); }
-
-      // enemies
-      for(const e of G.enemies){ lctx.fillStyle = e.color; lctx.beginPath(); lctx.arc(e.x,e.y,e.r,0,Math.PI*2); lctx.fill(); // HP bar
-        lctx.fillStyle = '#222'; lctx.fillRect(e.x - e.r, e.y - e.r - 6, e.r*2, 4); lctx.fillStyle = '#ff6b6b'; lctx.fillRect(e.x - e.r, e.y - e.r - 6, (e.hp/e.maxHp)*e.r*2, 4);
-      }
-
-      // particles and floating texts
-      for(const p of G.particles){ if(p.text){ lctx.fillStyle = p.color; lctx.font = '8px monospace'; lctx.fillText(p.text, p.x, p.y); } else { lctx.fillStyle = p.color; lctx.fillRect(p.x,p.y,2,2); } }
-
-      // blit low onto screen scaled
-      const ctx = screen.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.clearRect(0,0,screen.width,screen.height); ctx.drawImage(low,0,0,LOW_W,LOW_H,0,0,screen.width,screen.height);
-    }
-
-    // UI and shop
-    function updateUI(){ killsEl.textContent = G.stats.kills; shotsEl.textContent = G.stats.shots; hitsEl.textContent = G.stats.hits; const acc = G.stats.shots?Math.round((G.stats.hits/G.stats.shots)*100):0; accEl.textContent = acc + '%'; creditsDisplay.textContent = 'Credits: ' + G.stats.credits; weaponNameEl.textContent = WEAPONS[weapon.index].name; weaponStatsEl.innerHTML = `FireRate: ${WEAPONS[weapon.index].fireRate}ms • Dmg: ${WEAPONS[weapon.index].damage} • ${WEAPONS[weapon.index].auto? 'Auto' : 'Semi'}`; renderShop(); }
-
-    function renderShop(){ shopEl.innerHTML = '';
-      // rate and damage upgrades for current weapon
-      SHOP.forEach(item=>{
-        const cost = Math.max(50, Math.floor(item.baseCost * (1 + (weapon.level*0.6))));
-        if(item.key==='unlock'){
-          const next = WEAPONS[weapon.index+1];
-          const btn = document.createElement('div'); btn.className='center';
-          if(next){ const price = next.costUnlock; btn.innerHTML = `<button onclick="buyUnlock()">Unlock ${next.name} - ${price}c</button>`; } else { btn.innerHTML = `<div style=\"color:#7fb6ff;\">All weapons unlocked</div>`; }
-          shopEl.appendChild(btn);
-        } else {
-          const el = document.createElement('div'); el.className='center'; el.innerHTML = `<button onclick=\"buy('${item.key}',${cost})\">${item.label} — ${cost}c</button>`; shopEl.appendChild(el);
+            updateControllerInfo();
         }
-      });
-      // quick weapon switch buttons
-      const sw = document.createElement('div'); sw.style.display='flex'; sw.style.gap='6px'; sw.style.marginTop='6px'; WEAPONS.forEach((w,i)=>{ const b = document.createElement('button'); b.textContent=w.name; b.style.flex='1'; b.onclick=()=>{ if(w.costUnlock && G.stats.credits < w.costUnlock) return alert('Not enough credits to unlock'); if(w.costUnlock && !w.costUnlock){}; weapon.index = i; updateUI(); }; sw.appendChild(b); }); shopEl.appendChild(sw);
-    }
 
-    function buy(key,cost){ if(G.stats.credits < cost) return alert('Not enough credits'); G.stats.credits -= cost; if(key==='rate') SHOP[0].apply(); if(key==='dmg') SHOP[1].apply(); weapon.level++; updateUI(); }
-    function buyUnlock(){ const nxt = WEAPONS[weapon.index+1]; if(!nxt) return; if(G.stats.credits < nxt.costUnlock) return alert('Not enough credits'); G.stats.credits -= nxt.costUnlock; // mark unlocked by setting costUnlock to 0
-      nxt.costUnlock = 0; alert(nxt.name + ' unlocked!'); updateUI(); }
+        function updateControllerInfo() {
+            const info = document.getElementById('controllerInfo');
+            const pads = navigator.getGamepads();
+            let html = '';
 
-    function togglePause(){ G.paused = !G.paused; document.getElementById('pauseBtn').textContent = G.paused? 'Resume' : 'Pause'; }
-    function resetGame(){ if(!confirm('Reset game?')) return; G.enemies=[]; G.bullets=[]; G.particles=[]; G.stats={kills:0,shots:0,hits:0,credits:0}; weapon = { index:0, level:0, lastShot:0 }; updateUI(); }
+            for (let i = 0; i < pads.length; i++) {
+                if (pads[i]) {
+                    const pad = pads[i];
+                    const type = gameState.controllerTypes[i] || getControllerType(pad);
+                    const buttons = BUTTON_LABELS[type];
 
-    // small automatic credit collection from particles
-    setInterval(()=>{ // small cleanup
-      if(G.stats.credits>999999) G.stats.credits = 999999; updateUI(); }, 2000);
+                    html += `<p><strong>Gamepad ${i}:</strong> ${pad.id}</p>`;
+                    html += `<p><strong>Type:</strong> ${type.toUpperCase()}</p>`;
+                    html += `<p>Buttons: ${buttons.join(', ')}</p>`;
+                    html += `<p>LT: ${pad.buttons[6]?.value.toFixed(2)} | RT: ${pad.buttons[7]?.value.toFixed(2)}</p>`;
+                    html += `<p>LS: (${pad.axes[0]?.toFixed(2)}, ${pad.axes[1]?.toFixed(2)}) | RS: (${pad.axes[2]?.toFixed(2)}, ${pad.axes[3]?.toFixed(2)})</p>`;
+                    html += '<hr style="border: 1px solid #444; margin: 10px 0;">';
+                }
+            }
+            info.innerHTML = html;
+        }
 
-    // init
-    updateUI(); requestAnimationFrame(loop);
-  </script>
-</body>
-</html>
+        window.addEventListener('gamepadconnected', () => {
+            updateGamepads();
+            console.log('Gamepad connected!');
+        });
+
+        window.addEventListener('gamepaddisconnected', () => {
+            updateGamepads();
+            console.log('Gamepad disconnected!');
+        });
+
+        // Game Functions
+        function startGame(game) {
+            gameState.currentGame = game;
+            gameState.isRunning = true;
+            gameState.score = 0;
+            gameState.startTime = Date.now();
+
+            document.getElementById('gameArea').classList.add('active');
+            document.getElementById('menu').style.display = 'none';
+
+            switch(game) {
+                case 'aim': startAimTraining(); break;
+                case 'speed': startSpeedClicking(); break;
+                case 'switching': startButtonSwitching(); break;
+                case 'reaction': startReactionTime(); break;
+                case 'precision': startPrecision(); break;
+            }
+        }
+
+        function endGame() {
+            gameState.isRunning = false;
+            document.getElementById('gameArea').classList.remove('active');
+            document.getElementById('menu').style.display = 'grid';
+            
+            if (gameState.currentGame === 'precision') {
+                cancelAnimationFrame(gameState.animationId);
+            }
+        }
+
+        // AIM TRAINING
+        function startAimTraining() {
+            let timeLeft = 30;
+            let hits = 0;
+            const container = document.getElementById('aimContainer');
+            
+            container.innerHTML = '';
+            placeAimTarget(container);
+
+            const timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('aimTimer').textContent = timeLeft;
+                document.getElementById('aimScore').textContent = hits;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    gameState.isRunning = false;
+                    showResult(`Aim Training Complete! Final Score: ${hits} hits`);
+                }
+            }, 1000);
+
+            function placeAimTarget(cont) {
+                if (!gameState.isRunning) return;
+                const target = document.createElement('div');
+                target.className = 'target';
+                const x = Math.random() * (cont.offsetWidth - 40);
+                const y = Math.random() * (cont.offsetHeight - 40);
+                target.style.left = x + 'px';
+                target.style.top = y + 'px';
+
+                target.onclick = (e) => {
+                    e.stopPropagation();
+                    hits++;
+                    target.remove();
+                    placeAimTarget(cont);
+                };
+
+                cont.appendChild(target);
+            }
+        }
+
+        // SPEED CLICKING
+        function startSpeedClicking() {
+            let timeLeft = 20;
+            let clicks = 0;
+            const grid = document.getElementById('speedGrid');
+
+            // Get button labels from first connected controller
+            const pads = navigator.getGamepads();
+            let controllerType = 'xbox';
+            for (let i = 0; i < pads.length; i++) {
+                if (pads[i]) {
+                    controllerType = gameState.controllerTypes[i] || getControllerType(pads[i]);
+                    break;
+                }
+            }
+
+            const buttons = BUTTON_LABELS[controllerType];
+
+            grid.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const btn = document.createElement('div');
+                btn.className = 'button-item';
+                btn.textContent = buttons[i % 4];
+                btn.onclick = () => {
+                    clicks++;
+                    document.getElementById('speedScore').textContent = clicks;
+                    btn.classList.add('highlight');
+                    setTimeout(() => btn.classList.remove('highlight'), 100);
+                };
+                grid.appendChild(btn);
+            }
+
+            // Controller button support
+            let lastButtonState = [false, false, false, false];
+            const checkButtons = setInterval(() => {
+                if (!gameState.isRunning) {
+                    clearInterval(checkButtons);
+                    return;
+                }
+                
+                const pads = navigator.getGamepads();
+                for (let pad of pads) {
+                    if (pad) {
+                        for (let i = 0; i < 4; i++) {
+                            const isPressed = pad.buttons[i].pressed;
+                            if (isPressed && !lastButtonState[i]) {
+                                clicks++;
+                                document.getElementById('speedScore').textContent = clicks;
+                            }
+                            lastButtonState[i] = isPressed;
+                        }
+                    }
+                }
+            }, 50);
+
+            const timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('speedTimer').textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    clearInterval(checkButtons);
+                    gameState.isRunning = false;
+                    showResult(`Speed Clicking Complete! Total Clicks: ${clicks}`);
+                }
+            }, 1000);
+        }
+
+        // BUTTON SWITCHING
+        function startButtonSwitching() {
+            // Get button labels from first connected controller
+            const pads = navigator.getGamepads();
+            let controllerType = 'xbox';
+            for (let i = 0; i < pads.length; i++) {
+                if (pads[i]) {
+                    controllerType = gameState.controllerTypes[i] || getControllerType(pads[i]);
+                    break;
+                }
+            }
+
+            const buttons = BUTTON_LABELS[controllerType];
+            const buttonMap = { [buttons[0]]: 0, [buttons[1]]: 1, [buttons[2]]: 2, [buttons[3]]: 3 };
+            let sequence = [];
+            let currentIndex = 0;
+            let score = 0;
+
+            function generateSequence() {
+                sequence = [];
+                for (let i = 0; i < 8; i++) {
+                    sequence.push(buttons[Math.floor(Math.random() * 4)]);
+                }
+                currentIndex = 0;
+                updateDisplay();
+            }
+
+            function updateDisplay() {
+                const display = document.getElementById('sequenceDisplay');
+                display.innerHTML = '';
+                sequence.forEach((btn, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'sequence-item';
+                    if (idx === currentIndex) item.classList.add('active');
+                    item.textContent = btn;
+                    display.appendChild(item);
+                });
+            }
+
+            function handleButtonPress(btn) {
+                if (sequence[currentIndex] === btn) {
+                    currentIndex++;
+                    updateDisplay();
+
+                    if (currentIndex === sequence.length) {
+                        score++;
+                        document.getElementById('switchingScore').textContent = score;
+                        generateSequence();
+                    }
+                } else {
+                    currentIndex = 0;
+                    score = Math.max(0, score - 1);
+                    document.getElementById('switchingScore').textContent = score;
+                    updateDisplay();
+                }
+
+                document.getElementById('switchingCombo').textContent = currentIndex;
+            }
+
+            generateSequence();
+
+            const container = document.getElementById('buttonContainer');
+            container.innerHTML = '';
+            buttons.forEach((btn, idx) => {
+                const el = document.createElement('div');
+                el.className = 'btn-primary ' + ['a', 'b', 'x', 'y'][idx];
+                el.textContent = btn;
+                el.onclick = () => handleButtonPress(btn);
+                container.appendChild(el);
+            });
+
+            // Controller support - track button states to avoid repeats
+            let lastButtonState = [false, false, false, false];
+            const checkController = setInterval(() => {
+                if (!gameState.isRunning) {
+                    clearInterval(checkController);
+                    return;
+                }
+
+                const pads = navigator.getGamepads();
+                for (let pad of pads) {
+                    if (pad) {
+                        for (let i = 0; i < 4; i++) {
+                            const isPressed = pad.buttons[i].pressed;
+                            if (isPressed && !lastButtonState[i]) {
+                                handleButtonPress(buttons[i]);
+                            }
+                            lastButtonState[i] = isPressed;
+                        }
+                    }
+                }
+            }, 50);
+
+            setTimeout(() => {
+                if (gameState.currentGame === 'switching') {
+                    clearInterval(checkController);
+                    gameState.isRunning = false;
+                    showResult(`Button Switching Complete! Sequences: ${score}`);
+                }
+            }, 45000);
+        }
+
+        // REACTION TIME
+        function startReactionTime() {
+            const box = document.getElementById('reactionBox');
+            let round = 0;
+            let times = [];
+
+            function runRound() {
+                round++;
+                document.getElementById('reactionRound').textContent = round;
+
+                if (round > 5) {
+                    const avg = (times.reduce((a, b) => a + b) / times.length).toFixed(0);
+                    showResult(`Reaction Time Complete! Average: ${avg}ms`);
+                    return;
+                }
+
+                box.textContent = 'Wait...';
+                box.className = 'reaction-box';
+
+                const delay = Math.random() * 3000 + 1000;
+                setTimeout(() => {
+                    if (!gameState.isRunning) return;
+                    
+                    box.textContent = 'GO!';
+                    box.className = 'reaction-box go';
+                    const startTime = Date.now();
+
+                    function handleClick() {
+                        const time = Date.now() - startTime;
+                        times.push(time);
+                        document.getElementById('reactionAvg').textContent = (times.reduce((a, b) => a + b) / times.length).toFixed(0);
+                        
+                        box.removeEventListener('click', handleClick);
+                        removeControllerListener();
+                        
+                        setTimeout(runRound, 500);
+                    }
+
+                    function removeControllerListener() {
+                        const pads = navigator.getGamepads();
+                        for (let pad of pads) {
+                            if (pad && pad.buttons.some(b => b.pressed)) {
+                                const time = Date.now() - startTime;
+                                times.push(time);
+                                document.getElementById('reactionAvg').textContent = (times.reduce((a, b) => a + b) / times.length).toFixed(0);
+                                setTimeout(runRound, 500);
+                                return;
+                            }
+                        }
+                    }
+
+                    box.addEventListener('click', handleClick);
+                    const checkInterval = setInterval(() => {
+                        if (!gameState.isRunning) {
+                            clearInterval(checkInterval);
+                            return;
+                        }
+
+                        const pads = navigator.getGamepads();
+                        for (let pad of pads) {
+                            if (pad && pad.buttons.some(b => b.pressed)) {
+                                clearInterval(checkInterval);
+                                const time = Date.now() - startTime;
+                                times.push(time);
+                                document.getElementById('reactionAvg').textContent = (times.reduce((a, b) => a + b) / times.length).toFixed(0);
+                                box.removeEventListener('click', handleClick);
+                                setTimeout(runRound, 500);
+                                return;
+                            }
+                        }
+                    }, 50);
+                }, delay);
+            }
+
+            runRound();
+        }
+
+        // STICK PRECISION
+        function startPrecision() {
+            let timeLeft = 30;
+            let hits = 0;
+            const zone = document.getElementById('crosshairZone');
+            const crosshair = document.getElementById('crosshair');
+            let targets = [];
+
+            function spawnTarget() {
+                if (!gameState.isRunning) return;
+
+                const target = document.createElement('div');
+                target.className = 'precision-target';
+                const x = Math.random() * (zone.offsetWidth - 60);
+                const y = Math.random() * (zone.offsetHeight - 60);
+                target.style.left = x + 'px';
+                target.style.top = y + 'px';
+                target.textContent = '●';
+
+                zone.appendChild(target);
+                targets.push({ el: target, x: x + 30, y: y + 30 });
+
+                setTimeout(() => {
+                    if (target.parentNode) target.remove();
+                    targets = targets.filter(t => t.el !== target);
+                }, 3000);
+            }
+
+            // Spawn targets
+            const spawnInterval = setInterval(() => {
+                if (gameState.isRunning) spawnTarget();
+            }, 800);
+
+            // Update crosshair with right stick
+            const updateCrosshair = () => {
+                if (!gameState.isRunning) {
+                    cancelAnimationFrame(gameState.animationId);
+                    return;
+                }
+
+                const pads = navigator.getGamepads();
+                for (let pad of pads) {
+                    if (pad) {
+                        const rx = pad.axes[2];
+                        const ry = pad.axes[3];
+                        const rt = pad.buttons[7].value;
+
+                        const centerX = zone.offsetWidth / 2;
+                        const centerY = zone.offsetHeight / 2;
+                        const x = centerX + rx * 150;
+                        const y = centerY + ry * 150;
+
+                        crosshair.style.left = x + 'px';
+                        crosshair.style.top = y + 'px';
+
+                        if (rt > 0.5) {
+                            targets = targets.filter(t => {
+                                const dx = t.x - x;
+                                const dy = t.y - y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                if (dist < 40) {
+                                    hits++;
+                                    document.getElementById('precisionScore').textContent = hits;
+                                    t.el.remove();
+                                    return false;
+                                }
+                                return true;
+                            });
+                        }
+                    }
+                }
